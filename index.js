@@ -20,6 +20,7 @@ console.log("Public Address: ", publicAddress);
 
 // Define the main function
 const main = async () => {
+    const contractAddress = "0xCfbaDf1b38F76a46d27b93B5B957c1Ae33Ff2F5A";
     // Get the balance of the public address and log it
     const balance = await provider.getBalance(publicAddress);
     console.log("Balance: ", ethers.utils.formatEther(balance));
@@ -30,24 +31,24 @@ const main = async () => {
         return;
     }
 
-    // Deploy the ERC20 contract using the signer
-    const factory = new ethers.ContractFactory(ERC20.abi, ERC20.bytecode, signer);
-    const contract = await factory.deploy();
-    const contractAddress = contract.address;
-    console.log("Contract Address: ", contractAddress);
-    await contract.deployed();
-    console.log("Contract Deployed");
+    const filter = {
+        address: contractAddress,
+        topics: [
+            ethers.utils.id("Transfer(address,address,uint256)")
+        ]
+    }
 
-    // Listen for Transfer events emitted by the contract
-    contract.on("Transfer", (from, to, value, event) => {
-        console.log("Event: ", event);
-        console.log("Transfer Event: ", from, to, value.toString());
+    const factory = new ethers.ContractFactory(ERC20.abi, ERC20.bytecode, signer);
+    const _contract = factory.attach(contractAddress);
+    console.log("Contract Address: ", _contract.address);
+
+    provider.on(filter, (data) => {
+        console.log("Event: ", data);
     });
 
-    // Perform a transfer of 0 tokens to the public address
-    const receipt = await contract.transfer(publicAddress, 0);
-    console.log("Transaction Hash: ", receipt.hash);
-    await receipt.wait()
+    const mintreceipt = await _contract.mint('50000000');
+    console.log("Transaction Hash: ", mintreceipt.hash);
+    await mintreceipt.wait()
     console.log("Transaction Mined");
 }
 
